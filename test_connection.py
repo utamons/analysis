@@ -8,6 +8,8 @@ from ibapi.common import BarData
 from threading import Thread
 import time
 
+symbol = "RGTI"
+
 DB_CONFIG = {
     "host": "127.0.0.1",
     "port": 3306,
@@ -15,6 +17,8 @@ DB_CONFIG = {
     "password": "password",
     "database": "analysis"
 }
+
+## SMA 10, WMA 120, WMA 400, SMA 4000
 
 class HistoricalDataApp(EWrapper, EClient):
     def __init__(self):
@@ -24,7 +28,7 @@ class HistoricalDataApp(EWrapper, EClient):
 
     def historicalData(self, reqId, bar: BarData):
         """Получаем свечные данные"""
-        print(f"Получены данные: {bar.date}, O:{bar.open}, H:{bar.high}, L:{bar.low}, C:{bar.close}, V:{bar.volume}")
+        ##print(f"Получены данные: {bar.date}, O:{bar.open}, H:{bar.high}, L:{bar.low}, C:{bar.close}, V:{bar.volume}")
         date_str = bar.date
         date_str_clean = " ".join(date_str.split()[:2])
         self.data.append({
@@ -65,12 +69,11 @@ class HistoricalDataApp(EWrapper, EClient):
                 low=VALUES(low), close=VALUES(close), volume=VALUES(volume)
             """
 
-            symbol = "AAPL"  # Здесь можно подставлять любой нужный тикер
             data_to_insert = [(symbol, row["datetime"], row["open"], row["high"], row["low"], row["close"], row["volume"]) for row in self.data]
 
             cursor.executemany(insert_query, data_to_insert)
             conn.commit()
-            print(f"Сохранено {cursor.rowcount} строк в БД.")
+            print(f"Сохранено {len(self.data)} строк в БД.")
 
         except mariadb.Error as err:
             print(f"Ошибка БД: {err}")
@@ -100,7 +103,7 @@ if __name__ == "__main__":
 
     # Создаём контракт для AAPL (или любой другой акции)
     contract = Contract()
-    contract.symbol = "AAPL"
+    contract.symbol = symbol
     contract.secType = "STK"
     contract.currency = "USD"
     contract.exchange = "SMART"
@@ -110,10 +113,10 @@ if __name__ == "__main__":
         reqId=1,
         contract=contract,
         endDateTime="",
-        durationStr="1 D",
+        durationStr="11 W",
         barSizeSetting="1 min",
         whatToShow="TRADES",
-        useRTH=1,
+        useRTH=0,
         formatDate=1,
         keepUpToDate=False,
         chartOptions=[]
