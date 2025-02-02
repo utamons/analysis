@@ -8,7 +8,11 @@ from ibapi.common import BarData
 from threading import Thread
 import time
 
-symbol = "RGTI"
+from numpy.ma.core import count
+
+symbol = "NNE"
+
+
 
 DB_CONFIG = {
     "host": "127.0.0.1",
@@ -21,13 +25,18 @@ DB_CONFIG = {
 ## SMA 10, WMA 120, WMA 400, SMA 4000
 
 class HistoricalDataApp(EWrapper, EClient):
+
     def __init__(self):
         EClient.__init__(self, self)
         self.data = [] # Список для хранения свечей
         self.data_received = False  # Флаг для завершения работы
+        self.counter = 0
 
     def historicalData(self, reqId, bar: BarData):
+        self.counter += 1
         """Получаем свечные данные"""
+        if self.counter % 1000 == 0:
+            print(f"Получено {self.counter} свечей.")
         ##print(f"Получены данные: {bar.date}, O:{bar.open}, H:{bar.high}, L:{bar.low}, C:{bar.close}, V:{bar.volume}")
         date_str = bar.date
         date_str_clean = " ".join(date_str.split()[:2])
@@ -113,7 +122,7 @@ if __name__ == "__main__":
         reqId=1,
         contract=contract,
         endDateTime="",
-        durationStr="11 W",
+        durationStr="21 W",
         barSizeSetting="1 min",
         whatToShow="TRADES",
         useRTH=0,

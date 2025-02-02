@@ -18,7 +18,7 @@ def fetch_historical_data():
         # SQL-запрос
         query = """
         SELECT datetime, open, high, low, close, volume
-        FROM historical_data
+        FROM historical_data WHERE symbol = 'NNE'
         ORDER BY datetime ASC
         """
 
@@ -191,16 +191,20 @@ for index, trade in trades_df.iterrows():
     # Доля изменения (прибыль или убыток)
     trade_return = (exit_price - entry_price) / entry_price
 
+    prev_deposit = deposit
+
     # Обновляем депозит
     deposit *= (1 + trade_return)
 
+    result = deposit - prev_deposit
+
     # Проверяем, была ли сделка убыточной
     if trade_return < 0:
-        lossSum += abs(trade_return)
+        lossSum += abs(result)
         current_loss_streak += 1  # Увеличиваем серию проигрышей
         max_loss_streak = max(max_loss_streak, current_loss_streak)  # Обновляем максимум
     else:
-        winSum += trade_return  # Суммируем доходные сделки
+        winSum += result  # Суммируем доходные сделки
         wins += 1
         current_loss_streak = 0  # Сброс серии убыточных сделок
 
@@ -210,7 +214,7 @@ for index, trade in trades_df.iterrows():
 
 
 # Рассчитываем win/loss ratio с защитой от деления на 0
-winloss_ratio = winSum / abs(lossSum) if lossSum != 0 else float("inf")
+winloss_ratio = ((winSum/wins)/(lossSum/(overal_trades-wins))) if lossSum > 0 else 0
 
 # Рассчитываем процент прибыльных сделок
 win_rate = (wins / overal_trades) if overal_trades > 0 else 0
@@ -220,7 +224,7 @@ print(f"Начальный депозит: {initial_deposit}")
 print(f"Финальный депозит: {deposit:.2f}")
 print(f"Доходность: {((deposit / initial_deposit) - 1) * 100:.2f}%")
 print(f"Максимальная серия убыточных сделок: {max_loss_streak}")
-print(f"Winloss ratio: {winloss_ratio:.2%}")
+print(f"Winloss ratio: {winloss_ratio:.2}")
 
 print(f"Общее количество сделок: {overal_trades}")
 print(f"Количество хороших сделок: {good_trades}")
