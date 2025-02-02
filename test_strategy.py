@@ -18,7 +18,7 @@ def fetch_historical_data():
         # SQL-запрос
         query = """
         SELECT datetime, open, high, low, close, volume
-        FROM historical_data
+        FROM historical_data WHERE datetime >= '2024-12-12 00:00:00'
         ORDER BY datetime ASC
         """
 
@@ -40,7 +40,7 @@ def fetch_historical_data():
 
 def calculate_moving_averages(df):
     # Простая скользящая средняя (SMA)
-    df["SMA_10"] = df["close"].rolling(window=20).mean()
+    df["SMA_10"] = df["close"].rolling(window=24).mean()
     df["SMA_4000"] = df["close"].rolling(window=4000).mean()
 
     # Взвешенная скользящая средняя (WMA)
@@ -48,7 +48,7 @@ def calculate_moving_averages(df):
         weights = range(1, period + 1)
         return series.rolling(period).apply(lambda x: (x * weights).sum() / sum(weights), raw=True)
 
-    df["WMA_120"] = weighted_moving_average(df["close"], 150)
+    df["WMA_120"] = weighted_moving_average(df["close"], 89)
     df["WMA_400"] = weighted_moving_average(df["close"], 400)
 
     return df
@@ -82,14 +82,15 @@ def iterative_backtest(df):
 
         wma120_t = row["WMA_120"]
         wma120_t1 = row_1["WMA_120"]
+        wma120_t2 = row_2["WMA_120"]
 
         close_t = row["close"]
 
         # ---- Логика входа ----
         if not in_position:
             # Проверяем условия входа
-            cond_wma_vs_sma = True ##(wma400_t > sma4000_t)
-            cond_both_up = True ##(wma400_t > wma400_t1) and (sma4000_t > sma4000_t1)
+            cond_wma_vs_sma = True #(wma400_t > sma4000_t)
+            cond_both_up = True #(wma400_t > wma400_t1) and (sma4000_t > sma4000_t1)
             cond_cross = (sma10_t1 < wma120_t1) and (sma10_t > wma120_t)
 
             if cond_wma_vs_sma and cond_both_up and cond_cross:
@@ -146,14 +147,17 @@ def iterative_backtest(df):
 
 # Тестируем загрузку данных
 df = fetch_historical_data()
-##if df is not None:
-##    print(df.head())  # Вывод первых строк
+
+# Фильтруем данные, оставляя только основную торговую сессию (9:30 - 16:00)
 
 # Вычисляем MA и выводим первые строки
 df = calculate_moving_averages(df)
 ##print(df[["datetime", "close", "SMA_10", "WMA_120", "WMA_400", "SMA_4000"]].head(4000))  # Проверяем 15 строк
 
 df = df.dropna().reset_index(drop=True)  # Удаляем строки с NaN и сбрасываем индексы
+
+df = df[(df["datetime"].dt.time >= pd.to_datetime("09:20").time()) &
+        (df["datetime"].dt.time <= pd.to_datetime("14:20").time())]
 
 df = iterative_backtest(df)
 
@@ -167,14 +171,17 @@ pd.set_option("display.max_columns", None)
 pd.set_option("display.width", 1200)
 ##print(trades_df[["entry_time", "entry_price", "exit_time", "exit_price"]])
 
-initial_deposit = 27000
+initial_deposit = 7000
 deposit = initial_deposit
 
 max_loss_streak = 0  # Максимальная серия убыточных сделок
 current_loss_streak = 0  # Текущая серия убыточных сделок
+good_trades = 0  # Количество удачных сделок
+overal_trades = 0
 
 # Проходим по всем трейдам и обновляем депозит
 for index, trade in trades_df.iterrows():
+    overal_trades += 1
     entry_price = trade["entry_price"]
     exit_price = trade["exit_price"]
 
@@ -191,12 +198,17 @@ for index, trade in trades_df.iterrows():
     else:
         current_loss_streak = 0  # Сброс серии убыточных сделок
 
-    print(f"entry {trade["entry_time"]}, exit {trade["exit_time"]} trade_return {trade_return:.2%}, deposit {deposit:.2f}")
+    if trade_return > 0.03:
+        good_trades += 1
+        print(f"entry {trade["entry_time"]}, exit {trade["exit_time"]} trade_return {trade_return:.2%}, deposit {deposit:.2f}")
 
 # Вывод результатов
 print(f"Начальный депозит: {initial_deposit}")
 print(f"Финальный депозит: {deposit:.2f}")
 print(f"Доходность: {((deposit / initial_deposit) - 1) * 100:.2f}%")
 print(f"Максимальная серия убыточных сделок: {max_loss_streak}")
+
+print(f"Общее количество сделок: {overal_trades}")
+print(f"Количество удачных сделок: {good_trades}")
 
 
