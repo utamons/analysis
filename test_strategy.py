@@ -18,7 +18,7 @@ def fetch_historical_data():
         # SQL-запрос
         query = """
         SELECT datetime, open, high, low, close, volume
-        FROM historical_data WHERE symbol = 'NNE'
+        FROM historical_data WHERE symbol = 'RGTI'
         ORDER BY datetime ASC
         """
 
@@ -40,7 +40,7 @@ def fetch_historical_data():
 
 def calculate_moving_averages(df):
     # Простая скользящая средняя (SMA)
-    df["SMA_10"] = df["close"].rolling(window=24).mean()
+    df["SMA_10"] = df["close"].rolling(window=10).mean()
     df["SMA_4000"] = df["close"].rolling(window=4000).mean()
 
     # Взвешенная скользящая средняя (WMA)
@@ -48,7 +48,7 @@ def calculate_moving_averages(df):
         weights = range(1, period + 1)
         return series.rolling(period).apply(lambda x: (x * weights).sum() / sum(weights), raw=True)
 
-    df["WMA_120"] = weighted_moving_average(df["close"], 89)
+    df["WMA_120"] = weighted_moving_average(df["close"], 110)
     df["WMA_400"] = weighted_moving_average(df["close"], 400)
 
     return df
@@ -109,11 +109,12 @@ def iterative_backtest(df):
             # ---- Логика выхода ----
             # Условие разворота SMA_10 на 3 бара
             cond_sma_down_3bars = (sma10_t2 > sma10_t1) and (sma10_t1 > sma10_t)
+            cond_cross = (sma10_t1 > wma120_t1) and (sma10_t < wma120_t)
 
             # Условие стоп-лосса
             cond_stop_loss = (close_t < current_entry_price * 0.99)
 
-            if cond_sma_down_3bars and not cond_stop_loss:
+            if cond_cross and not cond_stop_loss:
                 in_position = False
                 exit_signal[i] = True
                 # Можем сразу обнулить current_entry_price,
@@ -125,7 +126,7 @@ def iterative_backtest(df):
                 trade["exit_price"] = row["close"]
 
 
-            if cond_stop_loss and not cond_sma_down_3bars:
+            if cond_stop_loss and not cond_cross:
                 in_position = False
                 exit_signal[i] = True
                 trade = trades[-1]  # последняя
@@ -156,9 +157,6 @@ df = calculate_moving_averages(df)
 
 df = df.dropna().reset_index(drop=True)  # Удаляем строки с NaN и сбрасываем индексы
 
-df = df[(df["datetime"].dt.time >= pd.to_datetime("09:20").time()) &
-        (df["datetime"].dt.time <= pd.to_datetime("14:20").time())]
-
 df = iterative_backtest(df)
 
 # Посмотреть, где появились сигналы:
@@ -169,7 +167,7 @@ df_signals = df[(df["entry_signal_iter"] | df["exit_signal_iter"])]
 trades_df = pd.DataFrame(trades)
 pd.set_option("display.max_columns", None)
 pd.set_option("display.width", 1200)
-##print(trades_df[["entry_time", "entry_price", "exit_time", "exit_price"]])
+#print(trades_df[["entry_time", "entry_price", "exit_time", "exit_price"]])
 
 initial_deposit = 7000
 deposit = initial_deposit
@@ -208,9 +206,9 @@ for index, trade in trades_df.iterrows():
         wins += 1
         current_loss_streak = 0  # Сброс серии убыточных сделок
 
-    if trade_return > 0.03:
-        good_trades += 1
-        print(f"entry {trade["entry_time"]}, exit {trade["exit_time"]} trade_return {trade_return:.2%}, deposit {deposit:.2f}")
+#    if trade_return > 0.03:
+#        good_trades += 1
+    print(f"entry {trade["entry_time"]}, exit {trade["exit_time"]} trade_return {trade_return:.2%}, deposit {deposit:.2f}")
 
 
 # Рассчитываем win/loss ratio с защитой от деления на 0

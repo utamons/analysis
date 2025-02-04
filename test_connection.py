@@ -8,11 +8,7 @@ from ibapi.common import BarData
 from threading import Thread
 import time
 
-from numpy.ma.core import count
-
-symbol = "NNE"
-
-
+symbol = "GRAL"
 
 DB_CONFIG = {
     "host": "127.0.0.1",
@@ -122,7 +118,7 @@ if __name__ == "__main__":
         reqId=1,
         contract=contract,
         endDateTime="",
-        durationStr="21 W",
+        durationStr="20 W",
         barSizeSetting="1 min",
         whatToShow="TRADES",
         useRTH=0,
