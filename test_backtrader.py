@@ -1,4 +1,3 @@
-from datetime import datetime
 from datetime import time
 
 import backtrader as bt
@@ -36,7 +35,8 @@ def debug(msg, enabled=True):
     if enabled:
         print(msg)
 
-# noinspection PyArgumentList
+
+# noinspection PyArgumentList,PyTypeChecker
 class MyStrategy(bt.Strategy):
     params = dict(
         debug = False,
@@ -159,11 +159,11 @@ class MyStrategy(bt.Strategy):
 class AllInSizer(bt.Sizer):
     def _getsizing(self, comminfo, cash, data, isbuy):
         size = int(cash / data.close[0])
-        current_dt = data.datetime.datetime(0)
+        #current_dt = data.datetime.datetime(0)
         #print(f"sizer cash: {cash}, date: {current_dt}  close: {data.close[0]}, isbuy: {isbuy}, size: {size}")
         return size if size > 0 else 0
 
-def fetch_historical_data(symbol="OKLO"):
+def fetch_historical_data():
     try:
         conn = mariadb.connect(
             user="root",
@@ -184,6 +184,7 @@ def fetch_historical_data(symbol="OKLO"):
         query = query.replace("?", f"'{symbol}'")
 
         # load data into DataFrame
+        # noinspection PyShadowingNames
         df = pd.read_sql(query, conn)
 
         # close connection
@@ -208,7 +209,7 @@ cerebro = bt.Cerebro()
 cerebro.broker.set_cash(7000)
 
 # 3. Loading the DataFrame
-df = fetch_historical_data(symbol)
+df = fetch_historical_data()
 
 # Creating the data feed
 # noinspection PyArgumentList
