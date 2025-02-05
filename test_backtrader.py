@@ -151,7 +151,7 @@ class MyStrategy(bt.Strategy):
 
 
     #def notify_trade(self, trade):
-    #   """Called when the trade is changed the status""" ini 762, next 765
+    #   """Called when the trade is changed the status"""
     #   print(f" trade size {trade.size} trade value {trade.value}")
     #   if trade.isclosed:
     #      print(f"entry: {trade.open_datetime()}, exit: {trade.close_datetime()} trade return: {trade.pnl}")
